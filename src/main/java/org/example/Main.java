@@ -12,19 +12,16 @@ public class Main {
     public static void main(String[] args) {
         long beginTime = System.currentTimeMillis();
         String fileName = args[0];
-        Set<String> uniqueLines = readUniqueLinesFromFile(fileName);
-        Set<Line> parsedLines = parseLines(uniqueLines);
+        Set<Line> parsedLines = readFile(fileName);
         for (int i = 0; i < numberOfColumns; i++) {
             columns.add(createHashMapForColumnOfValues(parsedLines, i));
         }
-
         for (Line line : parsedLines) {
             Set<Line> groupForLine = findGroupForLine(line);
             if (!groupForLine.isEmpty()) {
                 groupsOfLines.add(groupForLine);
             }
         }
-
         groupsOfLines.sort((o1, o2) -> o2.size() - o1.size());
         groupsOfLines.removeIf(group -> group.size() <= 1);
         long endTime = System.currentTimeMillis();
@@ -32,16 +29,14 @@ public class Main {
         writeResultToFile(workTime);
     }
 
-    static Set<String> readUniqueLinesFromFile(String fileName) {
-        Set<String> lines = new HashSet<>();
+    static Set<Line> readFile(String fileName) {
+        Set<Line> lines = new HashSet<>(1000000);
         try (FileReader reader = new FileReader(fileName);
              BufferedReader bufferedReader = new BufferedReader(reader)) {
             while (bufferedReader.ready()) {
                 String line = bufferedReader.readLine();
-                if (!lines.contains(line)) {
-                    if (isLineValid(line)) {
-                        lines.add(line);
-                    }
+                if (isLineValid(line)) {
+                    lines.add(new Line(splitLine(line)));
                 }
             }
         } catch (IOException e) {
@@ -81,15 +76,6 @@ public class Main {
         }
     }
 
-    private static Set<Line> parseLines(Set<String> uniqueLines) {
-        Set<Line> parsedLines = new HashSet<>();
-        for (String line : uniqueLines) {
-            List<String> values = splitLine(line);
-            parsedLines.add(new Line(values));
-        }
-        return parsedLines;
-    }
-
     static List<String> splitLine(String line) {
         List<String> values = new ArrayList<>();
         int lastIndexOfAfterSemicolon = 0;
@@ -121,7 +107,13 @@ public class Main {
                 }
             }
         }
-
+        // если нет парных значений, то удаляем из колонки
+        Iterator<Map.Entry<String, Set<Line>>> iterator = linesWithSameValue.entrySet().iterator();
+        while(iterator.hasNext()) {
+            if (iterator.next().getValue().size() == 1) {
+                    iterator.remove();
+            }
+        }
         return linesWithSameValue;
     }
 
